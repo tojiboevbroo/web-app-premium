@@ -1,0 +1,327 @@
+<!DOCTYPE html 
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Milliy Star - Do'kon</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --primary: #3b82f6;
+            --accent: #eab308;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #22c55e;
+            --danger: #ef4444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text); padding-bottom: 80px; }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: var(--card-bg);
+            border-bottom: 1px solid #334155;
+        }
+
+        .admin-badge {
+            background: var(--danger);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .container { padding: 20px; max-width: 600px; margin: 0 auto; }
+        .section-title { font-size: 1.2rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+        .card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            text-align: center;
+            position: relative;
+        }
+        .card h3 { font-size: 1.1rem; margin-bottom: 10px; }
+        .price { color: var(--accent); font-weight: bold; font-size: 1rem; margin-bottom: 15px; }
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            width: 100%;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn-success { background: var(--success); }
+
+        .nav-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0; right: 0;
+            background: var(--card-bg);
+            display: flex;
+            border-top: 1px solid #334155;
+        }
+        .nav-btn {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .nav-btn.active { color: var(--primary); }
+
+        .page { display: none; }
+        .page.active { display: block; }
+
+        .input-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; color: var(--text-muted); }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .order-item {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 5px solid var(--primary);
+        }
+        .order-item.Pending { border-left-color: var(--accent); }
+        .order-item.Bajarildi { border-left-color: var(--success); }
+        .order-item.Bekor_qilindi { border-left-color: var(--danger); }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>Milliy Star</h2>
+        <div class="admin-badge" onclick="showAdminPanel()">Admin Panel</div>
+    </div>
+
+    <div class="container">
+        <!-- DO'KON SAHIFASI -->
+        <div id="page-shop" class="page active">
+            <div class="section-title">⭐ Telegram Stars (240 so'm/dona)</div>
+            <div class="grid" id="stars-grid">
+                <!-- Dinamik generatsiya qilinadi -->
+            </div>
+
+            <div class="section-title">👑 Telegram Premium</div>
+            <div class="grid" id="premium-grid">
+                <!-- Dinamik generatsiya qilinadi -->
+            </div>
+        </div>
+
+        <!-- BUYURTMALARIM SAHIFASI -->
+        <div id="page-orders" class="page">
+            <div class="section-title">Mening Buyurtmalarim</div>
+            <div id="userOrdersList"></div>
+        </div>
+    </div>
+
+    <!-- BUYURTMA BERISH MODALI -->
+    <div id="orderModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle" style="margin-bottom: 15px;"></h3>
+            <div class="input-group">
+                <label>Telegram Username yoki ID:</label>
+                <input type="text" id="targetUser" placeholder="@username">
+            </div>
+            <p style="margin-bottom: 15px;">To'lov kartasi: <b>8600 0000 0000 0000</b></p>
+            <button class="btn btn-success" onclick="confirmOrder()">To'ladim (Buyurtma berish)</button>
+            <button class="btn" style="background: var(--danger); margin-top: 10px;" onclick="closeModal()">Bekor qilish</button>
+        </div>
+    </div>
+
+    <!-- ADMIN PANEL MODALI -->
+    <div id="adminModal" class="modal">
+        <div class="modal-content" style="max-width: 600px; max-height: 80vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3>Admin Boshqaruvi</h3>
+                <button class="btn" style="width: auto; padding: 5px 10px;" onclick="closeAdmin()">Yopish</button>
+            </div>
+            <h4>Barcha Buyurtmalar:</h4>
+            <div id="allOrdersList" style="margin-top: 10px;"></div>
+        </div>
+    </div>
+
+    <div class="nav-bar">
+        <a href="#shop" class="nav-btn active" onclick="switchTab('shop', this)">Do'kon</a>
+        <a href="#orders" class="nav-btn" onclick="switchTab('orders', this)">Buyurtmalarim</a>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        const ratePerStar = 240;
+        const starPackages = [50, 100, 250, 500, 1000];
+        const premiumPackages = [
+            { months: 1, price: 50000 },
+            { months: 3, price: 170000 },
+            { months: 6, price: 225000 },
+            { months: 12, price: 400000 }
+        ];
+
+        let selectedProduct = "";
+        let selectedPrice = 0;
+
+        function initStore() {
+            const starsGrid = document.getElementById('stars-grid');
+            starPackages.forEach(stars => {
+                const price = stars * ratePerStar;
+                starsGrid.innerHTML += `
+                    <div class="card">
+                        <h3>${stars} Stars</h3>
+                        <div class="price">${price.toLocaleString()} so'm</div>
+                        <button class="btn" onclick="openOrder('${stars} Stars', ${price})">Olish</button>
+                    </div>
+                `;
+            });
+
+            const premiumGrid = document.getElementById('premium-grid');
+            premiumPackages.forEach(p => {
+                premiumGrid.innerHTML += `
+                    <div class="card">
+                        <h3>${p.months} Oylik Premium</h3>
+                        <div class="price">${p.price.toLocaleString()} so'm</div>
+                        <button class="btn" onclick="openOrder('${p.months} Oylik Premium', ${p.price})">Olish</button>
+                    </div>
+                `;
+            });
+        }
+
+        function switchTab(pageId, btn) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`page-${pageId}`).classList.add('active');
+            btn.classList.add('active');
+            if(pageId === 'orders') renderUserOrders();
+        }
+
+        function openOrder(product, price) {
+            selectedProduct = product;
+            selectedPrice = price;
+            document.getElementById('modalTitle').innerText = `${product} — ${price.toLocaleString()} so'm`;
+            document.getElementById('orderModal').style.display = 'flex';
+        }
+
+        function closeModal() { document.getElementById('orderModal').style.display = 'none'; }
+
+        function confirmOrder() {
+            const user = document.getElementById('targetUser').value.trim();
+            if(!user) { alert("Iltimos, username yoki ID kiriting!"); return; }
+
+            const orders = JSON.parse(localStorage.getItem('ms_orders') || '[]');
+            const newOrder = {
+                id: Date.now(),
+                buyer: tg.initDataUnsafe?.user?.username || "Mehmon",
+                target: user,
+                product: selectedProduct,
+                price: selectedPrice,
+                status: "Kutilmoqda"
+            };
+            orders.unshift(newOrder);
+            localStorage.setItem('ms_orders', JSON.stringify(orders));
+
+            closeModal();
+            alert("Buyurtma qabul qilindi!");
+            document.getElementById('targetUser').value = '';
+        }
+
+        function renderUserOrders() {
+            const list = document.getElementById('userOrdersList');
+            const orders = JSON.parse(localStorage.getItem('ms_orders') || '[]');
+            list.innerHTML = orders.length ? '' : '<p>Hozircha buyurtmalar yo\'q.</p>';
+            
+            orders.forEach(o => {
+                let statusClass = "Pending";
+                if(o.status === "Bajarildi") statusClass = "Bajarildi";
+                if(o.status === "Bekor qilingan") statusClass = "Bekor_qilindi";
+
+                list.innerHTML += `
+                    <div class="order-item ${statusClass}">
+                        <div style="display: flex; justify-content: space-between;">
+                            <b>${o.product}</b><span style="color: var(--accent);">${o.price.toLocaleString()} so'm</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 5px;">
+                            Kimga: ${o.target} | Holati: ${o.status}
+                        </p>
+                    </div>
+                `;
+            });
+        }
+
+        function showAdminPanel() {
+            renderAdminOrders();
+            document.getElementById('adminModal').style.display = 'flex';
+        }
+        function closeAdmin() { document.getElementById('adminModal').style.display = 'none'; }
+
+        function renderAdminOrders() {
+            const list = document.getElementById('allOrdersList');
+            const orders = JSON.parse(localStorage.getItem('ms_orders') || '[]');
+            list.innerHTML = orders.length ? '' : '<p>Buyurtmalar mavjud emas.</p>';
+
+            orders.forEach((o, index) => {
+                list.innerHTML += `
+                    <div class="order-item" style="margin-bottom: 15px;">
+                        <div><b>${o.product}</b> uchun Mijoz: @${o.target} (${o.price.toLocaleString()} so'm)</div>
+                        <div style="margin-top: 10px; display: flex; gap: 10px;">
+                            <button class="btn btn-success" onclick="updateStatus(${index}, 'Bajarildi')">Bajarildi</button>
+                            <button class="btn" style="background: var(--danger);" onclick="updateStatus(${index}, 'Bekor qilingan')">Bekor qilish</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function updateStatus(index, status) {
+            const orders = JSON.parse(localStorage.getItem('ms_orders') || '[]');
+            orders[index].status = status;
+            localStorage.setItem('ms_orders', JSON.stringify(orders));
+            renderAdminOrders();
+        }
+
+        initStore();
+    </script>
+</body>
+</html>
+
